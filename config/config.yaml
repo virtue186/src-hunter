@@ -1,0 +1,11 @@
+server:
+  port: "8080" # API 服务监听的端口
+
+# 数据库配置
+database:
+  host: "localhost"
+  port: 5432
+  user: "hecate"      # 你的 PostgreSQL 用户名
+  password: "010526.." # 你的 PostgreSQL 密码
+  dbname: "hecate_db"     # 数据库名称
+  sslmode: "disable"    # 暂时在自己的开发环境禁用SSL
