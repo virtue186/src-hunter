@@ -1,0 +1,3 @@
+bin/               # 忽略 bin 目录
+.idea/             # 忽略 IDE 配置目录
+pkg/logger/app.log
