@@ -15,6 +15,7 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client) *gin.Engine {
 
 	projectHandler := handler.NewProjectHandler(db)
 	scanHandler := handler.NewScanHandler(db, asynqClient)
+	scanProfileHandler := handler.NewScanProfileHandler(db)
 
 	apiV1 := router.Group("/api/v1")
 	{
@@ -26,6 +27,15 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client) *gin.Engine {
 		scans := apiV1.Group("/scans")
 		{
 			scans.POST("", scanHandler.CreateScan)
+		}
+
+		scanProfiles := apiV1.Group("/scan-profiles")
+		{
+			scanProfiles.POST("", scanProfileHandler.CreateScanProfile)
+			scanProfiles.GET("", scanProfileHandler.GetScanProfiles)
+			scanProfiles.GET("/:id", scanProfileHandler.GetScanProfileByID)
+			scanProfiles.PUT("/:id", scanProfileHandler.UpdateScanProfile)
+			scanProfiles.DELETE("/:id", scanProfileHandler.DeleteScanProfile)
 		}
 	}
 

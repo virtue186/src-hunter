@@ -52,11 +52,12 @@ func (h *ScanHandler) CreateScan(c *gin.Context) {
 
 		// 创建父任务，代表整个工作流
 		parentTask = model.Task{
-			ProjectID:     req.ProjectID,
-			ScanProfileID: req.ScanProfileID,
-			Type:          "workflow",
-			Status:        "pending",
-			Payload:       payloadBytes, // 存入序列化后的 []byte
+			ProjectID:       req.ProjectID,
+			ScanProfileID:   req.ScanProfileID,
+			Type:            "workflow",
+			Status:          "pending",
+			Payload:         payloadBytes, // 存入序列化后的 []byte
+			PendingSubtasks: len(req.InitialInputs),
 		}
 		if err := tx.Create(&parentTask).Error; err != nil {
 			return err

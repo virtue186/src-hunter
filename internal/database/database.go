@@ -30,6 +30,13 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&model.Project{},
 		&model.ProjectTarget{},
+		&model.Asset{},
+		&model.Domain{},
+		&model.AssetDomainMapping{},
+		&model.IPMetadata{},
+		&model.Task{},
+		&model.ScanProfile{},
+		&model.TaskOutput{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate projects: %w", err)

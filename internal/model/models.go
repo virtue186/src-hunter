@@ -14,22 +14,20 @@ type Project struct {
 
 type ProjectTarget struct {
 	gorm.Model
-	ProjectID uint `gorm:"uniqueIndex:idx_project_target_unique;comment:所属项目ID"`
-	// 核心字段
-	Value string `gorm:"uniqueIndex:idx_project_target_unique;size:1024;not null;comment:目标的值 (e.g., example.com, 1.2.3.4, 10.0.0.0/8)"`
-	Type  string `gorm:"size:50;not null;comment:目标类型 (domain, ip, cidr)"`
-	// 扩展字段
+	// 使用 gorm 标签定义了一个名为 idx_project_target_unique 的复合唯一索引
+	ProjectID   uint   `gorm:"uniqueIndex:idx_project_target_unique;comment:所属项目ID"`
+	Value       string `gorm:"uniqueIndex:idx_project_target_unique;size:1024;not null;comment:目标的值 (e.g., example.com, 1.2.3.4, 10.0.0.0/8)"`
+	Type        string `gorm:"size:50;not null;comment:目标类型 (domain, ip, cidr)"`
 	Description string `gorm:"type:text;comment:对此目标的描述"`
 	IsActive    bool   `gorm:"default:true;index;comment:是否启用对此目标的周期性扫描"`
 }
 
 type Asset struct {
 	gorm.Model
-	ProjectID uint `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:所属项目ID"`
-
-	// 唯一确定一个资产服务
-	IP   string `gorm:"uniqueIndex:idx_asset_unique_in_project;size:128;comment:IPv4或IPv6地址"`
-	Port int    `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:端口号"`
+	// 复合唯一索引：同一个项目下的 IP + Port 是唯一的
+	ProjectID uint   `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:所属项目ID"`
+	IP        string `gorm:"uniqueIndex:idx_asset_unique_in_project;size:128;comment:IPv4或IPv6地址"`
+	Port      int    `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:端口号"`
 
 	Protocol   string    `gorm:"size:50;comment:应用层协议 (e.g., http, ssh)"`
 	Source     string    `gorm:"size:100;comment:发现来源 (e.g., nmap, masscan)"`
@@ -38,9 +36,10 @@ type Asset struct {
 
 type Domain struct {
 	gorm.Model
-	ProjectID uint `gorm:"uniqueIndex:idx_domain_unique_in_project;comment:所属项目ID"`
+	// 复合唯一索引：同一个项目下的 FQDN 是唯一的
+	ProjectID uint   `gorm:"uniqueIndex:idx_domain_unique_in_project;comment:所属项目ID"`
+	FQDN      string `gorm:"uniqueIndex:idx_domain_unique_in_project;size:255;comment:完整域名"`
 
-	FQDN       string    `gorm:"uniqueIndex:idx_domain_unique_in_project;size:255;comment:完整域名"`
 	RootDomain string    `gorm:"index;size:255;comment:根域名, 用于聚合查询"`
 	Source     string    `gorm:"size:100;comment:发现来源 (e.g., subfinder)"`
 	LastSeenAt time.Time `gorm:"index;comment:最后一次解析到此域名的时间"`
@@ -63,7 +62,7 @@ type IPMetadata struct {
 type Task struct {
 	gorm.Model
 	ProjectID     uint      `gorm:"index;comment:任务所属的项目ID"`
-	ScanProfileID uint      `gorm:"index;comment:关联的扫描模板ID"` // <-- 新增字段
+	ScanProfileID uint      `gorm:"index;comment:关联的扫描模板ID"`
 	AsynqID       string    `gorm:"index;size:128;comment:Asynq任务的唯一ID,父任务或独立任务才有"`
 	Type          string    `gorm:"index;size:100;comment:任务类型"`
 	Payload       []byte    `gorm:"type:jsonb;comment:任务载荷(JSON格式)"`

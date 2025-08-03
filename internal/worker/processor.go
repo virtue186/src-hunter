@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"github.com/hibiken/asynq"
 	"github.com/src-hunter/internal/model"
+	"github.com/src-hunter/internal/worker/parser"
+	"github.com/src-hunter/pkg/logger"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"strings"
@@ -67,6 +70,11 @@ func (p *TaskProcessor) HandleWorkflowTask(ctx context.Context, t *asynq.Task) e
 	if err != nil {
 		return p.failTask(&childTask, fmt.Sprintf("渲染命令模板失败: %v", err))
 	}
+	logger.Logger.Info("即将执行任务命令",
+		zap.Uint("task_id", childTask.ID),
+		zap.String("step_name", step.Name),
+		zap.String("command", cmdString),
+	)
 	cmdParts := strings.Fields(cmdString)
 	cmdResult, err := p.Executor.Run(ctx, cmdParts[0], cmdParts[1:]...)
 	if err != nil {
@@ -79,9 +87,38 @@ func (p *TaskProcessor) HandleWorkflowTask(ctx context.Context, t *asynq.Task) e
 		OutputType:   step.OutputParserType,
 		Data:         model.JSONB(cmdResult.Stdout),
 	}
-	if err := p.DB.Create(&outputRecord).Error; err != nil {
-		return p.failTask(&childTask, fmt.Sprintf("存储任务输出失败: %v", err))
+
+	if step.OutputParserType != "" {
+		registeredParser, err := parser.Get(step.OutputParserType)
+		if err != nil {
+			// 如果找不到解析器，可以选择仅记录警告而不使任务失败
+			p.DB.Model(&childTask).Update("result", fmt.Sprintf("警告：找不到解析器 %s", step.OutputParserType))
+		} else {
+			parseResult, err := registeredParser.Parse(cmdResult.Stdout)
+			if err != nil {
+				return p.failTask(&childTask, fmt.Sprintf("使用解析器 '%s' 解析输出失败: %v", step.OutputParserType, err))
+			}
+
+			// 3. 将解析后的结构化数据存入相应的数据表
+			// 这里需要获取父任务信息来关联 ProjectID
+			var parentTask model.Task
+			if p.DB.First(&parentTask, payload.ParentTaskID).Error == nil {
+				if len(parseResult.Domains) > 0 {
+					for i := range parseResult.Domains {
+						parseResult.Domains[i].ProjectID = parentTask.ProjectID
+						if step.InputFrom == "initial" {
+							parseResult.Domains[i].RootDomain = payload.Input
+						}
+					}
+					// 使用 gorm 的批量插入，并忽略冲突
+					p.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&parseResult.Domains)
+				}
+				// (未来可以在此添加对 Assets 的处理)
+				// if len(parseResult.Assets) > 0 { ... }
+			}
+		}
 	}
+
 	if err := p.triggerNextStep(&childTask, &payload, &profile, &outputRecord); err != nil {
 		return p.failTask(&childTask, fmt.Sprintf("触发下一步任务失败: %v", err))
 	}
@@ -100,7 +137,7 @@ func (p *TaskProcessor) failTask(task *model.Task, reason string) error {
 
 func (p *TaskProcessor) finalizeParallelSubtask(childTask *model.Task) error {
 	if childTask.ParentTaskID == 0 {
-		// 不是并行子任务，直接标记成功
+		// 不是子任务，直接标记成功并返回
 		childTask.Status = "success"
 		childTask.Result = "任务成功完成"
 		return p.DB.Save(childTask).Error
@@ -110,50 +147,68 @@ func (p *TaskProcessor) finalizeParallelSubtask(childTask *model.Task) error {
 	var remaining int64
 
 	err := p.DB.Transaction(func(tx *gorm.DB) error {
-		// 使用行级锁锁定父任务，防止并发更新问题
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&parentTask, childTask.ParentTaskID).Error; err != nil {
-			return err
+			return err // 找不到父任务，直接返回错误
 		}
 		if parentTask.PendingSubtasks <= 0 {
-			// 父任务不是一个扇出节点，或者已经处理完毕
-			return nil
+			return nil // 父任务无需等待，直接返回
 		}
 		parentTask.PendingSubtasks--
 		remaining = int64(parentTask.PendingSubtasks)
 		return tx.Save(&parentTask).Error
 	})
+
 	if err != nil {
-		return err
+		return err // 事务失败
 	}
 
-	// 在事务外标记子任务成功
+	// 标记当前子任务成功
 	childTask.Status = "success"
 	childTask.Result = "并行子任务成功完成"
 	p.DB.Save(childTask)
 
-	// 修正点 3: 实现了并行任务完成后的“扇入”触发逻辑
+	// ========== 核心修正区域开始 ==========
 	if remaining == 0 {
 		fmt.Printf("所有并行子任务 (扇出任务ID: %d) 已全部完成。\n", parentTask.ID)
 		parentTask.Status = "success" // 标记扇出任务本身成功
 		p.DB.Save(&parentTask)
 
-		// 触发扇出任务的下一步
 		var profile model.ScanProfile
-		p.DB.First(&profile, parentTask.ScanProfileID) // 使用父任务的ID获取profile
+		if err := p.DB.First(&profile, parentTask.ScanProfileID).Error; err != nil {
+			// 找不到关联的模板，这是一个严重错误
+			return p.failTask(&parentTask, fmt.Sprintf("扇入失败：找不到扫描模板ID %d", parentTask.ScanProfileID))
+		}
 
-		// 构造一个“伪”payload来触发下一步
+		// 检查这个扇出任务（父任务）之后是否还有步骤
+		_, ok := findNextStep(profile.WorkflowSteps, parentTask.WorkflowStep)
+		if !ok {
+			// 如果没有下一步，说明这是工作流的最后阶段。
+			// 我们需要找到最顶层的父任务，并将其标记为 "completed"
+			var ultimateParentTask = parentTask
+			// 通过循环查找，直到找到 ParentTaskID 为 0 的顶级任务
+			for ultimateParentTask.ParentTaskID != 0 {
+				if err := p.DB.First(&ultimateParentTask, ultimateParentTask.ParentTaskID).Error; err != nil {
+					// 如果中途出错，记录错误并返回
+					return p.failTask(&parentTask, fmt.Sprintf("扇入失败：查找顶级父任务时出错: %v", err))
+				}
+			}
+			fmt.Printf("工作流 (顶级任务ID: %d) 已成功完成。\n", ultimateParentTask.ID)
+			ultimateParentTask.Status = "completed"
+			ultimateParentTask.Result = "工作流成功完成"
+			return p.DB.Save(&ultimateParentTask).Error
+		}
+
 		parentPayload := Payload{
-			ParentTaskID:    parentTask.ParentTaskID, // 注意，父级是爷级
+			ParentTaskID:    parentTask.ParentTaskID, // 父级是爷级
 			ScanProfileID:   parentTask.ScanProfileID,
 			CurrentStepName: parentTask.WorkflowStep,
 		}
 
-		var parentOutput model.TaskOutput
-		// 理论上，扇出任务本身也应该有聚合后的输出，这里暂时简化
-		p.DB.Where("task_id = ?", parentTask.ID).First(&parentOutput)
+		var pseudoOutput model.TaskOutput
 
-		return p.triggerNextStep(&parentTask, &parentPayload, &profile, &parentOutput)
+		return p.triggerNextStep(&parentTask, &parentPayload, &profile, &pseudoOutput)
 	}
+
 	return nil
 }
 

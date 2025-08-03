@@ -1,3 +1,16 @@
-2025-08-03 15:58:59	INFO	web/main.go:25	连接数据库成功
-2025-08-03 15:58:59	INFO	web/main.go:25	数据库迁移成功
-2025-08-03 15:58:59	INFO	runtime/proc.go:283	Server is running on 	{"addr": ":8000"}
+2025-08-03 22:41:00	INFO	web/main.go:25	连接数据库成功
+2025-08-03 22:41:00	INFO	web/main.go:25	数据库迁移成功
+2025-08-03 22:41:00	INFO	runtime/proc.go:283	Server is running on 	{"addr": ":8000"}
+2025-08-03 22:41:10	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scan-profiles", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "6.269204ms"}
+2025-08-03 22:41:30	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "GET", "path": "/api/v1/scan-profiles", "client_ip": "127.0.0.1", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0", "cost": "2.137106ms"}
+2025-08-03 22:41:30	WARN	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 404, "method": "GET", "path": "/favicon.ico", "client_ip": "127.0.0.1", "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0", "cost": "1.074µs", "errors": ""}
+2025-08-03 22:44:09	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scan-profiles", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "4.116951ms"}
+2025-08-03 22:50:10	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scans", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "25.731529ms"}
+2025-08-03 22:58:51	INFO	web/main.go:25	连接数据库成功
+2025-08-03 22:58:51	INFO	web/main.go:25	数据库迁移成功
+2025-08-03 22:58:51	INFO	runtime/proc.go:283	Server is running on 	{"addr": ":8000"}
+2025-08-03 22:58:51	ERROR	runtime/proc.go:283	Server is shutting down	{"error": "listen tcp :8000: bind: address already in use"}
+2025-08-03 22:59:07	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scans", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "9.460656ms"}
+2025-08-03 23:05:05	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scans", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "17.475419ms"}
+2025-08-03 23:07:00	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scans", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "8.404706ms"}
+2025-08-03 23:11:45	INFO	gin@v1.10.1/context.go:185	HTTP request	{"status_code": 200, "method": "POST", "path": "/api/v1/scans", "client_ip": "::1", "user_agent": "curl/8.5.0", "cost": "13.544551ms"}
