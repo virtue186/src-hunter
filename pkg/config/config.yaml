@@ -4,7 +4,7 @@ server:
 logger:
   mode: "dev"            # dev 或 prod
   level: "debug"         # debug/info/warn/error
-  path: "./pkg/logger/app.log"   # 日志文件路径
+#  path: "./pkg/logger/app.log"   # 日志文件路径
   max_size: 100          # 单文件最大 MB
   max_backups: 7         # 保留旧文件数
   max_age: 30            # 保留天数
@@ -18,3 +18,8 @@ database:
   password: "123.com" # 你的 PostgreSQL 密码
   dbname: "src_hunter_db"     # 数据库名称
   sslmode: "disable"    # 暂时在自己的开发环境禁用SSL
+
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0

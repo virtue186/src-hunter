@@ -25,9 +25,12 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	logger.Logger.Info("connected to database")
+	logger.Logger.Info("连接数据库成功")
 
-	err = db.AutoMigrate(&model.Project{})
+	err = db.AutoMigrate(
+		&model.Project{},
+		&model.ProjectTarget{},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate projects: %w", err)
 	}
@@ -37,7 +40,7 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 func GetDB() *gorm.DB {
 	if db == nil {
-		panic("Database is not initialized")
+		panic("数据库未初始化")
 	}
 	return db
 }

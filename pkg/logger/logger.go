@@ -12,14 +12,14 @@ import (
 
 var Logger *zap.Logger
 
-func InitLogger(cfg *config.LoggerConfig) error {
+func InitLogger(cfg *config.LoggerConfig, componentName string, logFilePath string) error {
 	// 解析日志级别
 	level := zapcore.InfoLevel
 	if err := level.UnmarshalText([]byte(strings.ToLower(cfg.Level))); err != nil {
 		level = zapcore.InfoLevel
 	}
 
-	writeSyncer := getLogWriter(cfg)
+	writeSyncer := getLogWriter(cfg, logFilePath)
 	encoder := getEncoder(cfg.Mode)
 
 	var core zapcore.Core
@@ -35,6 +35,7 @@ func InitLogger(cfg *config.LoggerConfig) error {
 	}
 
 	Logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
+	zap.Fields(zap.String("component", componentName))
 	zap.ReplaceGlobals(Logger)
 	return nil
 }
@@ -52,9 +53,9 @@ func getEncoder(mode string) zapcore.Encoder {
 	return zapcore.NewConsoleEncoder(encCfg)
 }
 
-func getLogWriter(cfg *config.LoggerConfig) zapcore.WriteSyncer {
+func getLogWriter(cfg *config.LoggerConfig, logFilePath string) zapcore.WriteSyncer {
 	return zapcore.AddSync(&lumberjack.Logger{
-		Filename:   cfg.Path,
+		Filename:   logFilePath,
 		MaxSize:    cfg.MaxSize,    // MB
 		MaxBackups: cfg.MaxBackups, // 备份文件数量
 		MaxAge:     cfg.MaxAge,     // 天数

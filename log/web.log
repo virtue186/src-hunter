@@ -1,0 +1,3 @@
+2025-08-03 15:58:59	INFO	web/main.go:25	连接数据库成功
+2025-08-03 15:58:59	INFO	web/main.go:25	数据库迁移成功
+2025-08-03 15:58:59	INFO	runtime/proc.go:283	Server is running on 	{"addr": ":8000"}

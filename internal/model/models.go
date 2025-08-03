@@ -62,13 +62,18 @@ type IPMetadata struct {
 
 type Task struct {
 	gorm.Model
-	ProjectID  uint      `gorm:"index;comment:任务所属的项目ID"`
-	AsynqID    string    `gorm:"uniqueIndex;size:128;comment:Asynq任务的唯一ID"`
-	Type       string    `gorm:"index;size:100;comment:任务类型"`
-	Payload    []byte    `gorm:"type:bytea;comment:任务载荷"`
-	Queue      string    `gorm:"index;size:50;comment:所属队列"`
-	Status     string    `gorm:"index;size:50;comment:任务状态 (pending, success, failed)"`
-	Result     string    `gorm:"type:text;comment:任务执行结果或错误信息"`
-	StartedAt  time.Time `gorm:"comment:任务开始执行时间"`
-	FinishedAt time.Time `gorm:"comment:任务执行完毕时间"`
+	ProjectID     uint      `gorm:"index;comment:任务所属的项目ID"`
+	ScanProfileID uint      `gorm:"index;comment:关联的扫描模板ID"` // <-- 新增字段
+	AsynqID       string    `gorm:"index;size:128;comment:Asynq任务的唯一ID,父任务或独立任务才有"`
+	Type          string    `gorm:"index;size:100;comment:任务类型"`
+	Payload       []byte    `gorm:"type:jsonb;comment:任务载荷(JSON格式)"`
+	Queue         string    `gorm:"index;size:50;comment:所属队列"`
+	Status        string    `gorm:"index;size:50;comment:任务状态 (pending, running, success, failed)"`
+	Result        string    `gorm:"type:text;comment:任务执行结果或错误信息"`
+	StartedAt     time.Time `gorm:"comment:任务开始执行时间"`
+	FinishedAt    time.Time `gorm:"comment:任务执行完毕时间"`
+
+	ParentTaskID    uint   `gorm:"index;comment:父任务ID，用于工作流"`
+	WorkflowStep    string `gorm:"size:100;comment:在工作流中所处的步骤名"`
+	PendingSubtasks int    `gorm:"default:0;comment:扇出任务的待处理子任务数量"`
 }

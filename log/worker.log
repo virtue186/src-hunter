@@ -1,0 +1,5 @@
+2025-08-03 16:29:30	INFO	runtime/proc.go:283	日志系统初始化成功
+2025-08-03 16:29:30	INFO	worker/main.go:23	连接数据库成功
+2025-08-03 16:29:30	INFO	worker/main.go:23	数据库迁移成功
+2025-08-03 16:29:30	INFO	runtime/proc.go:283	Worker数据库连接成功
+2025-08-03 16:29:30	INFO	runtime/proc.go:283	Worker已启动，正在等待任务...
