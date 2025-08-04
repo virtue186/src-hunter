@@ -42,7 +42,6 @@ func (h *ScanHandler) CreateScan(c *gin.Context) {
 			return err
 		}
 
-		// *** 核心修正点在这里 ***
 		// 2. 将完整的请求体序列化为JSON，作为父任务的Payload
 		payloadBytes, err := json.Marshal(req)
 		if err != nil {
@@ -76,6 +75,7 @@ func (h *ScanHandler) CreateScan(c *gin.Context) {
 				"scan_profile_id":   profile.ID,
 				"current_step_name": firstStep.Name,
 				"input":             input,
+				"project_id":        parentTask.ProjectID,
 			})
 
 			task := asynq.NewTask(firstStep.TaskType, taskPayload)

@@ -16,13 +16,19 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client) *gin.Engine {
 	projectHandler := handler.NewProjectHandler(db)
 	scanHandler := handler.NewScanHandler(db, asynqClient)
 	scanProfileHandler := handler.NewScanProfileHandler(db)
+	taskHandler := handler.NewTaskHandler(db)
+	domainHandler := handler.NewDomainHandler(db)
 
 	apiV1 := router.Group("/api/v1")
 	{
 		projects := apiV1.Group("/projects")
 		{
+			projects.GET("", projectHandler.GetProjects)
+			projects.GET("/:projectId", projectHandler.GetProjectByID)
 			projects.POST("", projectHandler.CreateProject)
 			projects.POST("/:projectId/targets", projectHandler.AddTargetsToProject)
+			projects.GET("/:projectId/tasks", taskHandler.GetTasksByProject)
+			projects.GET("/:projectId/domains", domainHandler.GetDomainsByProject)
 		}
 		scans := apiV1.Group("/scans")
 		{

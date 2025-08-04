@@ -1,9 +1,34 @@
 package model
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"gorm.io/gorm"
 	"time"
 )
+
+// JSONBArray 是一个可以处理JSON数组的自定义类型
+type JSONBArray []string
+
+func (j JSONBArray) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(j)
+}
+
+func (j *JSONBArray) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+	if len(bytes) == 0 {
+		*j = make(JSONBArray, 0)
+		return nil
+	}
+	return json.Unmarshal(bytes, j)
+}
 
 type Project struct {
 	gorm.Model
@@ -25,13 +50,15 @@ type ProjectTarget struct {
 type Asset struct {
 	gorm.Model
 	// 复合唯一索引：同一个项目下的 IP + Port 是唯一的
-	ProjectID uint   `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:所属项目ID"`
-	IP        string `gorm:"uniqueIndex:idx_asset_unique_in_project;size:128;comment:IPv4或IPv6地址"`
-	Port      int    `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:端口号"`
-
-	Protocol   string    `gorm:"size:50;comment:应用层协议 (e.g., http, ssh)"`
-	Source     string    `gorm:"size:100;comment:发现来源 (e.g., nmap, masscan)"`
-	LastSeenAt time.Time `gorm:"index;comment:最后一次扫描到此资产存活的时间"`
+	ProjectID    uint       `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:所属项目ID"`
+	IP           string     `gorm:"uniqueIndex:idx_asset_unique_in_project;size:128;comment:IPv4或IPv6地址"`
+	Port         int        `gorm:"uniqueIndex:idx_asset_unique_in_project;comment:端口号"`
+	Title        string     `gorm:"type:text;comment:网页标题"`
+	WebServer    string     `gorm:"size:255;comment:Web服务器软件 (e.g., nginx, Apache)"`
+	Technologies JSONBArray `gorm:"type:jsonb;comment:使用的技术栈"`
+	Protocol     string     `gorm:"size:50;comment:应用层协议 (e.g., http, ssh)"`
+	Source       string     `gorm:"size:100;comment:发现来源 (e.g., nmap, masscan)"`
+	LastSeenAt   time.Time  `gorm:"index;comment:最后一次扫描到此资产存活的时间"`
 }
 
 type Domain struct {

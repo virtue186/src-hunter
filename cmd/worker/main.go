@@ -30,7 +30,7 @@ func main() {
 		asynq.RedisClientOpt{Addr: cfg.Redis.Addr}, // 从配置中读取Redis地址
 		asynq.Config{
 			// 指定并发处理任务的数量
-			Concurrency: 10,
+			Concurrency: 50,
 			// 定义不同优先级的队列
 			Queues: map[string]int{
 				"critical": 6,
@@ -44,6 +44,7 @@ func main() {
 	taskProcessor := worker.NewTaskProcessor(db, asynq.NewClient(asynq.RedisClientOpt{Addr: cfg.Redis.Addr}))
 
 	mux.HandleFunc("discovery:subdomain:subfinder", taskProcessor.HandleWorkflowTask)
+	mux.HandleFunc("discovery:webrecon:httpx", taskProcessor.HandleWorkflowTask)
 
 	logger.Logger.Info("Worker已启动，正在等待任务...")
 	if err := srv.Run(mux); err != nil {

@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"github.com/src-hunter/internal/model"
 )
@@ -10,7 +8,6 @@ import (
 // SubfinderParser 负责解析 subfinder 的输出
 type SubfinderParser struct{}
 
-// 在包加载时，自动将自己注册到全局注册表
 func init() {
 	// 对应 ScanProfile 中的 "output_parser_type"
 	Register("subfinder_json_list", &SubfinderParser{})
@@ -22,23 +19,23 @@ type subfinderOutputLine struct {
 	Source string `json:"source"`
 }
 
-// Parse 实现了 Parser 接口
+// Parse 实现了 Parser 接口，现在可以直接解析一个包含多个对象的JSON数组
 func (p *SubfinderParser) Parse(output []byte) (*ParseResult, error) {
-	var domains []model.Domain
-	scanner := bufio.NewScanner(bytes.NewReader(output))
+	var lines []subfinderOutputLine
+	// --- 核心修正点：直接将整个JSON数组反序列化到一个结构体切片中 ---
+	if err := json.Unmarshal(output, &lines); err != nil {
+		return nil, err
+	}
 
-	for scanner.Scan() {
-		var line subfinderOutputLine
-		if err := json.Unmarshal(scanner.Bytes(), &line); err != nil {
-			continue
-		}
+	var domains []model.Domain
+	for _, line := range lines {
 		if line.Host != "" {
 			domains = append(domains, model.Domain{
 				FQDN:   line.Host,
-				Source: line.Source, // 记录发现来源
+				Source: line.Source,
 			})
 		}
 	}
 
-	return &ParseResult{Domains: domains}, scanner.Err()
+	return &ParseResult{Domains: domains}, nil
 }
