@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	"github.com/src-hunter/internal/api/handler"
@@ -12,6 +13,13 @@ func SetupRouter(db *gorm.DB, asynqClient *asynq.Client) *gin.Engine {
 	router := gin.New()
 	router.Use(middleware.LoggerMiddleware())
 	router.Use(gin.Recovery())
+
+	config := cors.DefaultConfig()
+	// 允许来自 Vite 开发服务器 (默认端口5173) 的请求
+	config.AllowOrigins = []string{"http://localhost:5173"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	router.Use(cors.New(config))
 
 	projectHandler := handler.NewProjectHandler(db)
 	scanHandler := handler.NewScanHandler(db, asynqClient)
